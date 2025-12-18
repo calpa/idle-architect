@@ -6,7 +6,7 @@ export type ShopProps = {
   money: number
   items: readonly ShopItemView[]
   numberNotation: NumberNotation
-  onBuy: (id: string) => void
+  onBuy: (id: string, quantity: number | 'max') => void
 }
 
 export default function Shop(props: ShopProps) {
@@ -69,14 +69,40 @@ export default function Shop(props: ShopProps) {
                       sx={{ height: 10, borderRadius: 999 }}
                     />
 
-                    <Button
-                      variant="outlined"
-                      onClick={() => onBuy(item.id)}
-                      disabled={!item.canBuy}
-                      sx={{ fontWeight: 800, textTransform: 'none' }}
-                    >
-                      {item.canBuy ? 'Buy' : 'Not enough money'}
-                    </Button>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => onBuy(item.id, 1)}
+                        disabled={!item.canBuy}
+                        sx={{ fontWeight: 800, textTransform: 'none' }}
+                      >
+                        Buy 1
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => onBuy(item.id, 5)}
+                        disabled={!item.canBuy5}
+                        sx={{ fontWeight: 800, textTransform: 'none' }}
+                      >
+                        Buy 5 ({formatNumber(item.cost5, numberNotation)})
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => onBuy(item.id, 10)}
+                        disabled={!item.canBuy10}
+                        sx={{ fontWeight: 800, textTransform: 'none' }}
+                      >
+                        Buy 10 ({formatNumber(item.cost10, numberNotation)})
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => onBuy(item.id, 'max')}
+                        disabled={!item.canBuyMax}
+                        sx={{ fontWeight: 800, textTransform: 'none' }}
+                      >
+                        MAX ({item.maxAffordableQty})
+                      </Button>
+                    </Stack>
                   </>
                 ) : (
                   <>

@@ -1,10 +1,15 @@
 import { atom, type Getter, type Setter } from 'jotai'
 import { defaultGameState, gameStateSchema, type GameState } from './schema/gameState'
-import { shopItemConfigs, type ShopItemConfig, type ShopItemId } from './schema/shop'
+import { shopItemConfigs, type ShopItemId } from './schema/shop'
 import { clearSavedGame, saveGameToStorage } from './gamePersistence'
 import { gameStateAtom } from './gameStateStore'
 import { pushNotificationAtom } from './notificationStore'
 import { checkAchievementsAtom, resetAchievementsAtom } from './achievementsStore'
+import {
+  getMaxAffordableQuantity,
+  getShopItemCost,
+  getTotalCostForQuantity,
+} from './utils/shopPricing'
 
 export const minedPerClick = 1
 
@@ -40,11 +45,6 @@ function setOwned(state: GameState, id: ShopItemId, nextOwned: number): GameStat
   }
 }
 
-export function getShopItemCost(config: ShopItemConfig, owned: number) {
-  const normalizedOwned = Math.max(0, Math.floor(owned))
-  return Math.ceil(config.baseCost * Math.pow(config.costGrowth, normalizedOwned))
-}
-
 export function getMoneyPerSecond(state: GameState) {
   return (
     state.autoMiners * shopItemConfigs[0].ratePerSecond +
@@ -70,6 +70,10 @@ export const derivedAtom = atom((get: Getter) => {
     .map((config) => {
       const owned = getOwned(state, config.id)
       const cost = getShopItemCost(config, owned)
+      const cost5 = getTotalCostForQuantity(config, owned, 5)
+      const cost10 = getTotalCostForQuantity(config, owned, 10)
+      const maxAffordableQty = getMaxAffordableQuantity(config, owned, state.money)
+      const maxAffordableCost = getTotalCostForQuantity(config, owned, maxAffordableQty)
       const unlocked = state.lifetimeMoneyEarned >= config.unlockAtLifetimeEarned
       const showLockedTeaser =
         !unlocked &&
@@ -82,8 +86,15 @@ export const derivedAtom = atom((get: Getter) => {
         name: config.name,
         owned,
         cost,
+        cost5,
+        cost10,
+        maxAffordableQty,
+        maxAffordableCost,
         ratePerSecond: config.ratePerSecond,
         canBuy: unlocked && state.money >= cost,
+        canBuy5: unlocked && state.money >= cost5,
+        canBuy10: unlocked && state.money >= cost10,
+        canBuyMax: unlocked && maxAffordableQty > 0,
         unlocked,
         visible,
         unlockAtLifetimeEarned: config.unlockAtLifetimeEarned,
@@ -111,19 +122,23 @@ export const mineAtom = atom(null, (get: Getter, set: Setter) => {
   set(checkAchievementsAtom, parsed)
 })
 
-function buyShopItem(get: Getter, set: Setter, id: ShopItemId) {
+function buyShopItem(get: Getter, set: Setter, id: ShopItemId, quantity: number | 'max') {
   const prev = get(gameStateAtom)
   const config = shopItemConfigs.find((c) => c.id === id)
   if (!config) return
 
   const owned = getOwned(prev, id)
-  const cost = getShopItemCost(config, owned)
-  if (prev.money < cost) return
+  const resolvedQty =
+    quantity === 'max' ? getMaxAffordableQuantity(config, owned, prev.money) : Math.max(0, Math.floor(quantity))
+  if (resolvedQty <= 0) return
 
-  const nextOwned = owned + 1
+  const totalCost = getTotalCostForQuantity(config, owned, resolvedQty)
+  if (prev.money < totalCost) return
+
+  const nextOwned = owned + resolvedQty
   const nextBase: GameState = {
     ...prev,
-    money: prev.money - cost,
+    money: prev.money - totalCost,
   }
   const next = setOwned(nextBase, id, nextOwned)
   const parsed = gameStateSchema.parse(next)
@@ -137,24 +152,31 @@ function buyShopItem(get: Getter, set: Setter, id: ShopItemId) {
 }
 
 export const buyAutoMinerAtom = atom(null, (get: Getter, set: Setter) => {
-  buyShopItem(get, set, 'autoMiner')
+  buyShopItem(get, set, 'autoMiner', 1)
 })
 
 export const buyDrillAtom = atom(null, (get: Getter, set: Setter) => {
-  buyShopItem(get, set, 'drill')
+  buyShopItem(get, set, 'drill', 1)
 })
 
 export const buyExcavatorAtom = atom(null, (get: Getter, set: Setter) => {
-  buyShopItem(get, set, 'excavator')
+  buyShopItem(get, set, 'excavator', 1)
 })
 
 export const buyFactoryAtom = atom(null, (get: Getter, set: Setter) => {
-  buyShopItem(get, set, 'factory')
+  buyShopItem(get, set, 'factory', 1)
 })
 
 export const buyAiForemanAtom = atom(null, (get: Getter, set: Setter) => {
-  buyShopItem(get, set, 'aiForeman')
+  buyShopItem(get, set, 'aiForeman', 1)
 })
+
+export const buyShopItemAtom = atom(
+  null,
+  (get: Getter, set: Setter, input: { id: ShopItemId; quantity: number | 'max' }) => {
+    buyShopItem(get, set, input.id, input.quantity)
+  },
+)
 
 export const advanceAtom = atom(null, (get: Getter, set: Setter, dtSeconds: number) => {
   if (!Number.isFinite(dtSeconds) || dtSeconds <= 0) return

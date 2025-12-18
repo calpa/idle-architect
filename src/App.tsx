@@ -3,11 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { Box, Container, Divider, Grid, Paper, Stack, Tab, Tabs, Typography } from '@mui/material'
 import {
   advanceAtom,
-  buyAutoMinerAtom,
-  buyAiForemanAtom,
-  buyDrillAtom,
-  buyExcavatorAtom,
-  buyFactoryAtom,
+  buyShopItemAtom,
   derivedAtom,
   mineAtom,
   resetAtom,
@@ -32,11 +28,7 @@ function App() {
   const settings = useAtomValue(settingsAtom)
   const achievementViews = useAtomValue(achievementViewsAtom)
   const mine = useSetAtom(mineAtom)
-  const buyAutoMiner = useSetAtom(buyAutoMinerAtom)
-  const buyDrill = useSetAtom(buyDrillAtom)
-  const buyExcavator = useSetAtom(buyExcavatorAtom)
-  const buyFactory = useSetAtom(buyFactoryAtom)
-  const buyAiForeman = useSetAtom(buyAiForemanAtom)
+  const buyShopItem = useSetAtom(buyShopItemAtom)
   const reset = useSetAtom(resetAtom)
   const advance = useSetAtom(advanceAtom)
   const updateSettings = useSetAtom(updateSettingsAtom)
@@ -161,24 +153,8 @@ function App() {
                 money={state.money}
                 items={derived.shopItems}
                 numberNotation={settings.numberNotation}
-                onBuy={(id) => {
-                  switch (id) {
-                    case 'autoMiner':
-                      buyAutoMiner()
-                      return
-                    case 'drill':
-                      buyDrill()
-                      return
-                    case 'excavator':
-                      buyExcavator()
-                      return
-                    case 'factory':
-                      buyFactory()
-                      return
-                    case 'aiForeman':
-                      buyAiForeman()
-                      return
-                  }
+                onBuy={(id, quantity) => {
+                  buyShopItem({ id: id as any, quantity })
                 }}
               />
             </Stack>

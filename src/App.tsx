@@ -21,6 +21,7 @@ import Shop from './components/Shop'
 import Stats from './components/Stats'
 import SettingsTab from './components/SettingsTab'
 import Tips from './components/Tips'
+import Notifications from './components/Notifications'
 import { settingsAtom, updateSettingsAtom } from './settingsStore'
 
 function App() {
@@ -82,7 +83,7 @@ function App() {
       setSecondsToNextAutosave((prev) => {
         if (prev == null) return prev
         if (prev <= 1) {
-          saveGame()
+          saveGame('auto')
           setLastSavedAtMs(Date.now())
           return autosaveIntervalSeconds
         }
@@ -188,7 +189,7 @@ function App() {
                 updateSettings({ autosaveIntervalMinutes: minutes })
               }
               onManualSave={() => {
-                saveGame()
+                saveGame('manual')
                 setLastSavedAtMs(Date.now())
               }}
               lastSavedAtMs={lastSavedAtMs}
@@ -198,6 +199,8 @@ function App() {
           )}
         </Box>
       </Container>
+
+      <Notifications />
     </Box>
   )
 }

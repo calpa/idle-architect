@@ -2,6 +2,7 @@ import { atom, type Getter, type Setter } from 'jotai'
 import { defaultGameState, gameStateSchema, type GameState } from './schema/gameState'
 import { shopItemConfigs, type ShopItemConfig, type ShopItemId } from './schema/shop'
 import { clearSavedGame, loadGameFromStorage, saveGameToStorage } from './gamePersistence'
+import { pushNotificationAtom } from './notificationStore'
 
 export const minedPerClick = 1
 
@@ -54,9 +55,13 @@ export function getMoneyPerSecond(state: GameState) {
 
 export const gameStateAtom = atom<GameState>(loadGameFromStorage())
 
-export const saveGameAtom = atom(null, (get: Getter) => {
+export const saveGameAtom = atom(null, (get: Getter, set: Setter, reason: 'manual' | 'auto') => {
   const state = get(gameStateAtom)
   saveGameToStorage(state)
+  set(pushNotificationAtom, {
+    severity: 'success',
+    message: reason === 'auto' ? 'Auto-saved' : 'Game saved',
+  })
 })
 
 export const derivedAtom = atom((get: Getter) => {
@@ -120,6 +125,11 @@ function buyShopItem(get: Getter, set: Setter, id: ShopItemId) {
   }
   const next = setOwned(nextBase, id, nextOwned)
   set(gameStateAtom, gameStateSchema.parse(next))
+
+  set(pushNotificationAtom, {
+    severity: 'success',
+    message: `Bought ${config.name}`,
+  })
 }
 
 export const buyAutoMinerAtom = atom(null, (get: Getter, set: Setter) => {
@@ -162,4 +172,9 @@ export const advanceAtom = atom(null, (get: Getter, set: Setter, dtSeconds: numb
 export const resetAtom = atom(null, (_get: Getter, set: Setter) => {
   clearSavedGame()
   set(gameStateAtom, defaultGameState)
+
+  set(pushNotificationAtom, {
+    severity: 'info',
+    message: 'Game reset',
+  })
 })

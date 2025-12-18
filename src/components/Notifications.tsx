@@ -11,7 +11,7 @@ export default function Notifications() {
   return (
     <Snackbar
       open={Boolean(current)}
-      autoHideDuration={3000}
+      autoHideDuration={1000}
       onClose={(_e, reason) => {
         if (reason === 'clickaway') return
         pop()

@@ -9,11 +9,11 @@ import {
   buyExcavatorAtom,
   buyFactoryAtom,
   derivedAtom,
-  gameStateAtom,
   mineAtom,
   resetAtom,
   saveGameAtom,
 } from './gameStore'
+import { gameStateAtom } from './gameStateStore'
 
 import HeaderBar from './components/HeaderBar'
 import MiningPanel from './components/MiningPanel'
@@ -22,12 +22,15 @@ import Stats from './components/Stats'
 import SettingsTab from './components/SettingsTab'
 import Tips from './components/Tips'
 import Notifications from './components/Notifications'
+import AchievementsTab from './components/AchievementsTab'
 import { settingsAtom, updateSettingsAtom } from './settingsStore'
+import { achievementViewsAtom } from './achievementsStore'
 
 function App() {
   const state = useAtomValue(gameStateAtom)
   const derived = useAtomValue(derivedAtom)
   const settings = useAtomValue(settingsAtom)
+  const achievementViews = useAtomValue(achievementViewsAtom)
   const mine = useSetAtom(mineAtom)
   const buyAutoMiner = useSetAtom(buyAutoMinerAtom)
   const buyDrill = useSetAtom(buyDrillAtom)
@@ -39,7 +42,7 @@ function App() {
   const updateSettings = useSetAtom(updateSettingsAtom)
   const saveGame = useSetAtom(saveGameAtom)
 
-  const [tab, setTab] = useState<'game' | 'settings'>('game')
+  const [tab, setTab] = useState<'game' | 'achievements' | 'settings'>('game')
 
   const autosaveIntervalSeconds = useMemo(() => {
     const minutes = settings.autosaveIntervalMinutes === '10' ? 10 : 1
@@ -108,6 +111,7 @@ function App() {
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Tabs value={tab} onChange={(_e, v) => setTab(v)}>
           <Tab label="Game" value="game" />
+          <Tab label="Achievements" value="achievements" />
           <Tab label="Settings" value="settings" />
         </Tabs>
 
@@ -178,6 +182,8 @@ function App() {
                 }}
               />
             </Stack>
+          ) : tab === 'achievements' ? (
+            <AchievementsTab achievements={achievementViews} numberNotation={settings.numberNotation} />
           ) : (
             <SettingsTab
               numberNotation={settings.numberNotation}

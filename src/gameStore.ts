@@ -1,8 +1,10 @@
 import { atom, type Getter, type Setter } from 'jotai'
 import { defaultGameState, gameStateSchema, type GameState } from './schema/gameState'
 import { shopItemConfigs, type ShopItemConfig, type ShopItemId } from './schema/shop'
-import { clearSavedGame, loadGameFromStorage, saveGameToStorage } from './gamePersistence'
+import { clearSavedGame, saveGameToStorage } from './gamePersistence'
+import { gameStateAtom } from './gameStateStore'
 import { pushNotificationAtom } from './notificationStore'
+import { checkAchievementsAtom, resetAchievementsAtom } from './achievementsStore'
 
 export const minedPerClick = 1
 
@@ -52,8 +54,6 @@ export function getMoneyPerSecond(state: GameState) {
     state.aiForemen * shopItemConfigs[4].ratePerSecond
   )
 }
-
-export const gameStateAtom = atom<GameState>(loadGameFromStorage())
 
 export const saveGameAtom = atom(null, (get: Getter, set: Setter, reason: 'manual' | 'auto') => {
   const state = get(gameStateAtom)
@@ -106,7 +106,9 @@ export const mineAtom = atom(null, (get: Getter, set: Setter) => {
     lifetimeMoneyEarned: prev.lifetimeMoneyEarned + minedPerClick,
     clicks: prev.clicks + 1,
   }
-  set(gameStateAtom, gameStateSchema.parse(next))
+  const parsed = gameStateSchema.parse(next)
+  set(gameStateAtom, parsed)
+  set(checkAchievementsAtom, parsed)
 })
 
 function buyShopItem(get: Getter, set: Setter, id: ShopItemId) {
@@ -124,7 +126,9 @@ function buyShopItem(get: Getter, set: Setter, id: ShopItemId) {
     money: prev.money - cost,
   }
   const next = setOwned(nextBase, id, nextOwned)
-  set(gameStateAtom, gameStateSchema.parse(next))
+  const parsed = gameStateSchema.parse(next)
+  set(gameStateAtom, parsed)
+  set(checkAchievementsAtom, parsed)
 
   set(pushNotificationAtom, {
     severity: 'success',
@@ -166,11 +170,14 @@ export const advanceAtom = atom(null, (get: Getter, set: Setter, dtSeconds: numb
     lifetimeMoneyEarned: prev.lifetimeMoneyEarned + gained,
   }
 
-  set(gameStateAtom, gameStateSchema.parse(next))
+  const parsed = gameStateSchema.parse(next)
+  set(gameStateAtom, parsed)
+  set(checkAchievementsAtom, parsed)
 })
 
 export const resetAtom = atom(null, (_get: Getter, set: Setter) => {
   clearSavedGame()
+  set(resetAchievementsAtom)
   set(gameStateAtom, defaultGameState)
 
   set(pushNotificationAtom, {

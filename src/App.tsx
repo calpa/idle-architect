@@ -1,20 +1,26 @@
-import './App.css'
 import { useEffect, useRef } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
+import { Box, Container, Divider, Grid, Paper, Stack, Typography } from '@mui/material'
 import {
   advanceAtom,
-  buyBuildingAtom,
+  buyAutoMinerAtom,
   derivedAtom,
   gameStateAtom,
   mineAtom,
   resetAtom,
 } from './gameStore'
 
+import HeaderBar from './components/HeaderBar'
+import MiningPanel from './components/MiningPanel'
+import Shop from './components/Shop'
+import Stats from './components/Stats'
+import Tips from './components/Tips'
+
 function App() {
   const state = useAtomValue(gameStateAtom)
   const derived = useAtomValue(derivedAtom)
   const mine = useSetAtom(mineAtom)
-  const buyBuilding = useSetAtom(buyBuildingAtom)
+  const buyAutoMiner = useSetAtom(buyAutoMinerAtom)
   const reset = useSetAtom(resetAtom)
   const advance = useSetAtom(advanceAtom)
 
@@ -36,69 +42,62 @@ function App() {
   }, [advance])
 
   return (
-    <div className="game">
-      <header className="gameHeader">
-        <h1>Mining Game</h1>
-        <div className="subTitle">Click to earn. Buy buildings to automate production.</div>
-      </header>
+    <Box sx={{ minHeight: '100vh' }}>
+      <HeaderBar
+        title="Idle Architect"
+        money={state.money}
+        moneyPerSecond={derived.moneyPerSecond}
+        onReset={reset}
+      />
 
-      <section className="panel">
-        <div className="stats">
-          <div className="stat">
-            <div className="statLabel">Money</div>
-            <div className="statValue">{state.money.toFixed(2)}</div>
-          </div>
-          <div className="stat">
-            <div className="statLabel">Clicks</div>
-            <div className="statValue">{state.clicks}</div>
-          </div>
-          <div className="stat">
-            <div className="statLabel">Production</div>
-            <div className="statValue">{derived.moneyPerSecond.toFixed(2)}/s</div>
-          </div>
-          <div className="stat">
-            <div className="statLabel">Buildings</div>
-            <div className="statValue">{derived.buildings.reduce((sum, b) => sum + b.owned, 0)}</div>
-          </div>
-        </div>
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Paper variant="outlined" sx={{ p: 2.5 }}>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: -0.6 }}>
+                    Mining
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Tap to mine, then reinvest into automation.
+                  </Typography>
+                </Box>
 
-        <div className="actions">
-          <button className="primary" onClick={mine}>
-            Mine (+{derived.minedPerClick})
-          </button>
-        </div>
+                <MiningPanel
+                  money={state.money}
+                  minedPerClick={derived.minedPerClick}
+                  minerCost={derived.minerCost}
+                  onMine={mine}
+                />
 
-        <div className="shop">
-          <div className="shopTitle">Shop</div>
-          <div className="shopList">
-            {derived.buildings.map((b) => (
-              <div key={b.id} className="shopItem">
-                <div className="shopItemMain">
-                  <div className="shopItemName">{b.name}</div>
-                  <div className="shopItemMeta">
-                    Owned: {b.owned} | +{b.baseRatePerSecond}/s each
-                  </div>
-                </div>
+                <Divider />
 
-                <button
-                  onClick={() => buyBuilding(b.id)}
-                  disabled={!b.canBuy}
-                  title={b.canBuy ? '' : `Need ${b.cost.toFixed(2)} money`}
-                >
-                  Buy ({b.cost.toFixed(2)})
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+                <Stats
+                  clicks={state.clicks}
+                  autoMiners={state.autoMiners}
+                  minerRatePerSecond={derived.minerRatePerSecond}
+                  moneyPerSecond={derived.moneyPerSecond}
+                />
+              </Stack>
+            </Paper>
+          </Grid>
 
-        <div className="footerRow">
-          <button className="ghost" onClick={reset}>
-            Reset
-          </button>
-        </div>
-      </section>
-    </div>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Stack spacing={2.5}>
+              <Shop
+                minerRatePerSecond={derived.minerRatePerSecond}
+                minerCost={derived.minerCost}
+                canBuyMiner={derived.canBuyMiner}
+                onBuyAutoMiner={buyAutoMiner}
+              />
+
+              <Tips />
+            </Stack>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   )
 }
 

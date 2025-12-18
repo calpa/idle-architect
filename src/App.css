@@ -62,47 +62,6 @@
   flex-wrap: wrap;
 }
 
-.shop {
-  display: grid;
-  gap: 0.75rem;
-  text-align: left;
-}
-
-.shopTitle {
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.shopList {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.shopItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.12);
-}
-
-.shopItemMain {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.shopItemName {
-  font-weight: 700;
-}
-
-.shopItemMeta {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9rem;
-}
-
 button.primary {
   border-color: rgba(100, 108, 255, 0.6);
 }

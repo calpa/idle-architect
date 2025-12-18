@@ -1,6 +1,7 @@
 import { atom, type Getter, type Setter } from 'jotai'
 import { defaultGameState, gameStateSchema, type GameState } from './schema/gameState'
 import { shopItemConfigs, type ShopItemConfig, type ShopItemId } from './schema/shop'
+import { clearSavedGame, loadGameFromStorage, saveGameToStorage } from './gamePersistence'
 
 export const minedPerClick = 1
 
@@ -51,7 +52,12 @@ export function getMoneyPerSecond(state: GameState) {
   )
 }
 
-export const gameStateAtom = atom<GameState>(defaultGameState)
+export const gameStateAtom = atom<GameState>(loadGameFromStorage())
+
+export const saveGameAtom = atom(null, (get: Getter) => {
+  const state = get(gameStateAtom)
+  saveGameToStorage(state)
+})
 
 export const derivedAtom = atom((get: Getter) => {
   const state = get(gameStateAtom)
@@ -154,5 +160,6 @@ export const advanceAtom = atom(null, (get: Getter, set: Setter, dtSeconds: numb
 })
 
 export const resetAtom = atom(null, (_get: Getter, set: Setter) => {
+  clearSavedGame()
   set(gameStateAtom, defaultGameState)
 })

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Box, Container, Divider, Grid, Paper, Stack, Tab, Tabs, Typography } from '@mui/material'
 import {
@@ -12,6 +12,7 @@ import {
   gameStateAtom,
   mineAtom,
   resetAtom,
+  saveGameAtom,
 } from './gameStore'
 
 import HeaderBar from './components/HeaderBar'
@@ -35,8 +36,19 @@ function App() {
   const reset = useSetAtom(resetAtom)
   const advance = useSetAtom(advanceAtom)
   const updateSettings = useSetAtom(updateSettingsAtom)
+  const saveGame = useSetAtom(saveGameAtom)
 
   const [tab, setTab] = useState<'game' | 'settings'>('game')
+
+  const autosaveIntervalSeconds = useMemo(() => {
+    const minutes = settings.autosaveIntervalMinutes === '10' ? 10 : 1
+    return minutes * 60
+  }, [settings.autosaveIntervalMinutes])
+
+  const [lastSavedAtMs, setLastSavedAtMs] = useState<number | null>(null)
+  const [secondsToNextAutosave, setSecondsToNextAutosave] = useState<number | null>(
+    settings.autosaveEnabled ? autosaveIntervalSeconds : null,
+  )
 
   const lastTickAtRef = useRef<number | null>(null)
 
@@ -54,6 +66,34 @@ function App() {
       window.clearInterval(intervalId)
     }
   }, [advance])
+
+  useEffect(() => {
+    if (!settings.autosaveEnabled) {
+      setSecondsToNextAutosave(null)
+      return
+    }
+    setSecondsToNextAutosave(autosaveIntervalSeconds)
+  }, [autosaveIntervalSeconds, settings.autosaveEnabled])
+
+  useEffect(() => {
+    if (!settings.autosaveEnabled) return
+
+    const timerId = window.setInterval(() => {
+      setSecondsToNextAutosave((prev) => {
+        if (prev == null) return prev
+        if (prev <= 1) {
+          saveGame()
+          setLastSavedAtMs(Date.now())
+          return autosaveIntervalSeconds
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      window.clearInterval(timerId)
+    }
+  }, [autosaveIntervalSeconds, saveGame, settings.autosaveEnabled])
 
   return (
     <Box sx={{ minHeight: '100vh' }}>
@@ -141,6 +181,18 @@ function App() {
             <SettingsTab
               numberNotation={settings.numberNotation}
               onChangeNumberNotation={(notation) => updateSettings({ numberNotation: notation })}
+              autosaveEnabled={settings.autosaveEnabled}
+              autosaveIntervalMinutes={settings.autosaveIntervalMinutes}
+              onChangeAutosaveEnabled={(enabled) => updateSettings({ autosaveEnabled: enabled })}
+              onChangeAutosaveIntervalMinutes={(minutes) =>
+                updateSettings({ autosaveIntervalMinutes: minutes })
+              }
+              onManualSave={() => {
+                saveGame()
+                setLastSavedAtMs(Date.now())
+              }}
+              lastSavedAtMs={lastSavedAtMs}
+              secondsToNextAutosave={secondsToNextAutosave}
               onResetGame={reset}
             />
           )}

@@ -1,27 +1,89 @@
 import { atom, type Getter, type Setter } from 'jotai'
 import { defaultGameState, gameStateSchema, type GameState } from './schema/gameState'
+import { shopItemConfigs, type ShopItemConfig, type ShopItemId } from './schema/shop'
 
 export const minedPerClick = 1
-export const minerBaseCost = 10
-export const minerCostGrowth = 1.15
-export const minerRatePerSecond = 1
 
-export function getAutoMinerCost(autoMinersOwned: number) {
-  const owned = Math.max(0, Math.floor(autoMinersOwned))
-  return Math.ceil(minerBaseCost * Math.pow(minerCostGrowth, owned))
+const lockedTeaserThreshold = 0.7
+
+function getOwned(state: GameState, id: ShopItemId) {
+  switch (id) {
+    case 'autoMiner':
+      return state.autoMiners
+    case 'drill':
+      return state.drills
+    case 'excavator':
+      return state.excavators
+    case 'factory':
+      return state.factories
+    case 'aiForeman':
+      return state.aiForemen
+  }
+}
+
+function setOwned(state: GameState, id: ShopItemId, nextOwned: number): GameState {
+  switch (id) {
+    case 'autoMiner':
+      return { ...state, autoMiners: nextOwned }
+    case 'drill':
+      return { ...state, drills: nextOwned }
+    case 'excavator':
+      return { ...state, excavators: nextOwned }
+    case 'factory':
+      return { ...state, factories: nextOwned }
+    case 'aiForeman':
+      return { ...state, aiForemen: nextOwned }
+  }
+}
+
+export function getShopItemCost(config: ShopItemConfig, owned: number) {
+  const normalizedOwned = Math.max(0, Math.floor(owned))
+  return Math.ceil(config.baseCost * Math.pow(config.costGrowth, normalizedOwned))
+}
+
+export function getMoneyPerSecond(state: GameState) {
+  return (
+    state.autoMiners * shopItemConfigs[0].ratePerSecond +
+    state.drills * shopItemConfigs[1].ratePerSecond +
+    state.excavators * shopItemConfigs[2].ratePerSecond +
+    state.factories * shopItemConfigs[3].ratePerSecond +
+    state.aiForemen * shopItemConfigs[4].ratePerSecond
+  )
 }
 
 export const gameStateAtom = atom<GameState>(defaultGameState)
 
 export const derivedAtom = atom((get: Getter) => {
   const state = get(gameStateAtom)
-  const minerCost = getAutoMinerCost(state.autoMiners)
+  const shopItems = shopItemConfigs
+    .map((config) => {
+      const owned = getOwned(state, config.id)
+      const cost = getShopItemCost(config, owned)
+      const unlocked = state.lifetimeMoneyEarned >= config.unlockAtLifetimeEarned
+      const showLockedTeaser =
+        !unlocked &&
+        config.unlockAtLifetimeEarned > 0 &&
+        state.lifetimeMoneyEarned >= config.unlockAtLifetimeEarned * lockedTeaserThreshold
+      const visible = unlocked || showLockedTeaser
+
+      return {
+        id: config.id,
+        name: config.name,
+        owned,
+        cost,
+        ratePerSecond: config.ratePerSecond,
+        canBuy: unlocked && state.money >= cost,
+        unlocked,
+        visible,
+        unlockAtLifetimeEarned: config.unlockAtLifetimeEarned,
+      }
+    })
+    .filter((x) => x.visible)
+  const moneyPerSecond = getMoneyPerSecond(state)
   return {
     minedPerClick,
-    minerCost,
-    minerRatePerSecond,
-    canBuyMiner: state.money >= minerCost,
-    moneyPerSecond: state.autoMiners * minerRatePerSecond,
+    moneyPerSecond,
+    shopItems,
   }
 })
 
@@ -30,33 +92,62 @@ export const mineAtom = atom(null, (get: Getter, set: Setter) => {
   const next: GameState = {
     ...prev,
     money: prev.money + minedPerClick,
+    lifetimeMoneyEarned: prev.lifetimeMoneyEarned + minedPerClick,
     clicks: prev.clicks + 1,
   }
   set(gameStateAtom, gameStateSchema.parse(next))
 })
 
-export const buyAutoMinerAtom = atom(null, (get: Getter, set: Setter) => {
+function buyShopItem(get: Getter, set: Setter, id: ShopItemId) {
   const prev = get(gameStateAtom)
-  const minerCost = getAutoMinerCost(prev.autoMiners)
-  if (prev.money < minerCost) return
-  const next: GameState = {
+  const config = shopItemConfigs.find((c) => c.id === id)
+  if (!config) return
+
+  const owned = getOwned(prev, id)
+  const cost = getShopItemCost(config, owned)
+  if (prev.money < cost) return
+
+  const nextOwned = owned + 1
+  const nextBase: GameState = {
     ...prev,
-    money: prev.money - minerCost,
-    autoMiners: prev.autoMiners + 1,
+    money: prev.money - cost,
   }
+  const next = setOwned(nextBase, id, nextOwned)
   set(gameStateAtom, gameStateSchema.parse(next))
+}
+
+export const buyAutoMinerAtom = atom(null, (get: Getter, set: Setter) => {
+  buyShopItem(get, set, 'autoMiner')
+})
+
+export const buyDrillAtom = atom(null, (get: Getter, set: Setter) => {
+  buyShopItem(get, set, 'drill')
+})
+
+export const buyExcavatorAtom = atom(null, (get: Getter, set: Setter) => {
+  buyShopItem(get, set, 'excavator')
+})
+
+export const buyFactoryAtom = atom(null, (get: Getter, set: Setter) => {
+  buyShopItem(get, set, 'factory')
+})
+
+export const buyAiForemanAtom = atom(null, (get: Getter, set: Setter) => {
+  buyShopItem(get, set, 'aiForeman')
 })
 
 export const advanceAtom = atom(null, (get: Getter, set: Setter, dtSeconds: number) => {
   if (!Number.isFinite(dtSeconds) || dtSeconds <= 0) return
 
   const prev = get(gameStateAtom)
-  if (prev.autoMiners <= 0) return
+  const moneyPerSecond = getMoneyPerSecond(prev)
+  if (moneyPerSecond <= 0) return
 
-  const gained = prev.autoMiners * minerRatePerSecond * dtSeconds
+  const gained = moneyPerSecond * dtSeconds
   const next: GameState = {
     ...prev,
     money: prev.money + gained,
+    lifetimeMoneyEarned: prev.lifetimeMoneyEarned + gained,
   }
 
   set(gameStateAtom, gameStateSchema.parse(next))

@@ -1,15 +1,15 @@
-import { AppBar, Box, Button, Stack, Toolbar, Tooltip, Typography } from '@mui/material'
-import { formatNumber } from './formatNumber'
+import { AppBar, Box, Stack, Toolbar, Typography } from '@mui/material'
+import { formatNumber, type NumberNotation } from './formatNumber'
 
 export type HeaderBarProps = {
   title: string
   money: number
   moneyPerSecond: number
-  onReset: () => void
+  numberNotation: NumberNotation
 }
 
 export default function HeaderBar(props: HeaderBarProps) {
-  const { title, money, moneyPerSecond, onReset } = props
+  const { title, money, moneyPerSecond, numberNotation } = props
 
   return (
     <AppBar
@@ -32,7 +32,7 @@ export default function HeaderBar(props: HeaderBarProps) {
               Money
             </Typography>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-              {formatNumber(money)}
+              {formatNumber(money, numberNotation)}
             </Typography>
           </Box>
           <Box>
@@ -40,15 +40,10 @@ export default function HeaderBar(props: HeaderBarProps) {
               / sec
             </Typography>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-              {formatNumber(moneyPerSecond)}
+              {formatNumber(moneyPerSecond, numberNotation)}
             </Typography>
           </Box>
         </Stack>
-        <Tooltip title="Reset progress">
-          <Button color="inherit" onClick={onReset}>
-            Reset
-          </Button>
-        </Tooltip>
       </Toolbar>
     </AppBar>
   )

@@ -1,15 +1,12 @@
-import { Box, Button, LinearProgress, Paper, Stack, Typography } from '@mui/material'
-import { formatNumber } from './formatNumber'
+import { Button, Paper, Stack } from '@mui/material'
 
 export type MiningPanelProps = {
-  money: number
   minedPerClick: number
-  minerCost: number
   onMine: () => void
 }
 
 export default function MiningPanel(props: MiningPanelProps) {
-  const { money, minedPerClick, minerCost, onMine } = props
+  const { minedPerClick, onMine } = props
 
   return (
     <Paper
@@ -29,22 +26,6 @@ export default function MiningPanel(props: MiningPanelProps) {
         >
           Mine (+{minedPerClick})
         </Button>
-
-        <Box>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
-            <Typography variant="body2" color="text.secondary">
-              Next Auto Miner
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 800 }}>
-              {formatNumber(Math.max(0, minerCost - money))} to go
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={Math.min(100, (money / minerCost) * 100)}
-            sx={{ mt: 1, height: 10, borderRadius: 999 }}
-          />
-        </Box>
       </Stack>
     </Paper>
   )
